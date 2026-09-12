@@ -30,6 +30,17 @@ export default [
     },
   },
 
+  // Keep TypeScript formatting consistent without imposing script formatting on Astro markup.
+  {
+    files: ["**/*.ts"],
+    rules: {
+      "comma-dangle": ["error", "always-multiline"],
+      "object-curly-spacing": ["error", "always"],
+      quotes: ["error", "single", { avoidEscape: true }],
+      semi: ["error", "always"],
+    },
+  },
+
   // Astro files
   ...eslintPluginAstro.configs.recommended,
 
