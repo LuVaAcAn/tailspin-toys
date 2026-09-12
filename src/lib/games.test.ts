@@ -3,8 +3,10 @@ import { createTestDatabase } from '../../db/test-helpers';
 import { categories, publishers, games } from '../../db/schema';
 import type { Database } from './db';
 import {
+    getAllCategories,
     getAllGames,
     getAllGameIds,
+    getAllPublishers,
     getGameById,
 } from './games';
 
@@ -50,6 +52,90 @@ describe('games data-access helpers', () => {
         const ids = await getAllGameIds(db);
         const all = await getAllGames(db);
         expect(ids).toEqual(all.map((g) => g.id));
+    });
+
+    it('lists categories and publishers for filter controls', async () => {
+        const [categoryOne] = await db.insert(categories).values({ name: 'Strategy', description: 'cat' }).returning({ id: categories.id });
+        const [categoryTwo] = await db.insert(categories).values({ name: 'Puzzle', description: 'cat' }).returning({ id: categories.id });
+        const [publisherOne] = await db.insert(publishers).values({ name: 'Pub One', description: 'pub' }).returning({ id: publishers.id });
+        const [publisherTwo] = await db.insert(publishers).values({ name: 'Pub Two', description: 'pub' }).returning({ id: publishers.id });
+
+        await db.insert(games).values({
+            title: 'Alpha',
+            description: 'Alpha description',
+            starRating: 4.3,
+            categoryId: categoryOne.id,
+            publisherId: publisherOne.id,
+        });
+        await db.insert(games).values({
+            title: 'Beta',
+            description: 'Beta description',
+            starRating: 4.5,
+            categoryId: categoryTwo.id,
+            publisherId: publisherTwo.id,
+        });
+
+        expect(await getAllCategories(db)).toEqual([
+            { id: categoryTwo.id, name: 'Puzzle' },
+            { id: categoryOne.id, name: 'Strategy' },
+        ]);
+        expect(await getAllPublishers(db)).toEqual([
+            { id: publisherOne.id, name: 'Pub One' },
+            { id: publisherTwo.id, name: 'Pub Two' },
+        ]);
+    });
+
+    it('filters games by category and publisher together', async () => {
+        const [strategyCategory] = await db
+            .insert(categories)
+            .values({ name: 'Strategy', description: 'cat' })
+            .returning({ id: categories.id });
+        const [puzzleCategory] = await db
+            .insert(categories)
+            .values({ name: 'Puzzle', description: 'cat' })
+            .returning({ id: categories.id });
+        const [onePublisher] = await db
+            .insert(publishers)
+            .values({ name: 'Pub One', description: 'pub' })
+            .returning({ id: publishers.id });
+        const [twoPublisher] = await db
+            .insert(publishers)
+            .values({ name: 'Pub Two', description: 'pub' })
+            .returning({ id: publishers.id });
+
+        await db.insert(games).values({
+            title: 'Alpha',
+            description: 'Alpha description',
+            starRating: 4.1,
+            categoryId: strategyCategory.id,
+            publisherId: onePublisher.id,
+        });
+        await db.insert(games).values({
+            title: 'Beta',
+            description: 'Beta description',
+            starRating: 4.8,
+            categoryId: strategyCategory.id,
+            publisherId: twoPublisher.id,
+        });
+        await db.insert(games).values({
+            title: 'Gamma',
+            description: 'Gamma description',
+            starRating: 4.4,
+            categoryId: puzzleCategory.id,
+            publisherId: onePublisher.id,
+        });
+
+        const byCategory = await getAllGames(db, { categoryIds: [strategyCategory.id] });
+        expect(byCategory.map((game) => game.title)).toEqual(['Alpha', 'Beta']);
+
+        const byPublisher = await getAllGames(db, { publisherId: twoPublisher.id });
+        expect(byPublisher.map((game) => game.title)).toEqual(['Beta']);
+
+        const combined = await getAllGames(db, {
+            categoryIds: [strategyCategory.id],
+            publisherId: onePublisher.id,
+        });
+        expect(combined.map((game) => game.title)).toEqual(['Alpha']);
     });
 
     it('fetches a single game by id', async () => {
