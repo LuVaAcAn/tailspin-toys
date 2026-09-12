@@ -50,6 +50,13 @@ Refer to technology-specific instruction files:
 - Keep components focused on a single responsibility
 - Use props for configuration, not duplication
 - Document component APIs with TypeScript types
+- Add a brief TSDoc comment above each reusable component's `Props` interface describing the public contract.
+
+### Comment Philosophy
+
+- Explain user-facing intent, accessibility decisions, and non-obvious trade-offs.
+- Do not comment markup or class names that already describe what the component renders.
+- Update or remove comments when the component behavior changes.
 
 ## Development Workflow
 
